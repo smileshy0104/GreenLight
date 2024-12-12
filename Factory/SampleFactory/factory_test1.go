@@ -2,7 +2,7 @@ package SampleFactory
 
 import "testing"
 
-func Test_factory(t *testing.T) {
+func Test_factory1(t *testing.T) {
 	// 构造工厂
 	fruitFactory := NewFruitFactory()
 
