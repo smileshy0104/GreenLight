@@ -6,13 +6,27 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"testing"
 	"time"
 )
 
+// 定义应用程序的版本号。
+const version = "1.0.0"
+
+// 配置结构体，用于存储服务器端口和环境变量。
+type config struct {
+	port int
+	env  string
+}
+
+// application 结构体包含配置和日志记录器。
+type application struct {
+	config config
+	logger *log.Logger
+}
+
 // TestHttpServer 是一个测试函数，用于启动 HTTP 服务器。
 // 主要功能包括解析命令行参数、初始化日志记录器和应用程序结构体、设置路由并启动服务器。
-func TestHttpServer(t *testing.T) {
+func main() {
 	var cfg config
 
 	// 解析命令行参数以初始化配置。
@@ -30,13 +44,14 @@ func TestHttpServer(t *testing.T) {
 	}
 
 	// 初始化请求路由器。
-	mux := http.NewServeMux()
-	mux.HandleFunc("/v1/healthcheck", app.healthcheckHandler)
+	//mux := http.NewServeMux()
+	//mux.HandleFunc("/v1/healthcheck", app.healthcheckHandler)
 
 	// 配置 HTTP 服务器。
+	// 使用 httprouter 作为请求路由器，并设置相关配置。
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.port),
-		Handler:      mux,
+		Handler:      app.routes(),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
