@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"log"
 	"time"
-
-	"github.com/lib/pq"
 )
 
 // Permissions holds the permission codes for a single user.
@@ -70,18 +68,4 @@ func (m PermissionModel) GetAllForUser(userID int64) (Permissions, error) {
 	}
 
 	return permissions, nil
-}
-
-// AddForUser adds the provided codes for a specific user.
-func (m PermissionModel) AddForUser(userID int64, codes ...string) error {
-	query := `
-		INSERT INTO users_permissions
-		SELECT $1, permissions.id FROM permissions WHERE permissions.code = ANY($2)
-		`
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	_, err := m.DB.ExecContext(ctx, query, userID, pq.Array(codes))
-	return err
 }

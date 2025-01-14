@@ -1,11 +1,14 @@
 package main
 
 import (
+	"DesignMode/GreenLight/internal/data"
+	"DesignMode/GreenLight/internal/mailer"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -16,12 +19,41 @@ const version = "1.0.0"
 type config struct {
 	port int
 	env  string
+	// db struct field holds the configuration settings for our database connection pool.
+	// For now this only holds the DSN, which we read in from a command-line flag.
+	db struct {
+		dsn          string
+		maxOpenConns int
+		maxIdleConns int
+		maxIdleTime  string
+	}
+	// Add a new limiter struct containing fields for the request-per-second and burst
+	// values, and a boolean field which we can use to enable/disable rate limiting.
+	limiter struct {
+		rps     float64
+		burst   int
+		enabled bool
+	}
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
+	cors struct {
+		trustedOrigins []string
+	}
 }
 
 // application 结构体包含配置和日志记录器。
 type application struct {
 	config config
 	logger *log.Logger
+	//logger *jsonlog.Logger
+	models data.Models
+	mailer mailer.Mailer
+	wg     sync.WaitGroup
 }
 
 // TestHttpServer 是一个测试函数，用于启动 HTTP 服务器。
@@ -38,6 +70,8 @@ func main() {
 
 	// 初始化日志记录器。
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	//logger := jsonlog.NewLogger(os.Stdout, jsonlog.LevelInfo)
+
 	app := &application{
 		config: cfg,
 		logger: logger,

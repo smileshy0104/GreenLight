@@ -120,8 +120,3 @@ func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error
 
 	return token, nil
 }
-
-func ValidateTokenPlaintext(v *validator.Validator, tokenPlaintext string) {
-	v.Check(tokenPlaintext != "", "token", "must be provided")
-	v.Check(len(tokenPlaintext) == 26, "token", "must be 26 bytes long")
-}
