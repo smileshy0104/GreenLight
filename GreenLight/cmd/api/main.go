@@ -2,7 +2,6 @@ package main
 
 import (
 	"DesignMode/GreenLight/internal/data"
-	"DesignMode/GreenLight/internal/mailer"
 	"flag"
 	"fmt"
 	"log"
@@ -52,7 +51,6 @@ type application struct {
 	logger *log.Logger
 	//logger *jsonlog.Logger
 	models data.Models
-	mailer mailer.Mailer
 	wg     sync.WaitGroup
 }
 
