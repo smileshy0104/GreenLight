@@ -8,11 +8,11 @@ import (
 	"strconv"
 )
 
+// TODO 用于提供公共函数的Helpers包
 // Define an envelope type.
 type envelope map[string]interface{}
 
-// readIDParam reads interpolated "id" from request URL and returns it and nil. If there is an error
-// it returns and 0 and an error.
+// readIDParam 读取路由中Id参数并返回
 func (app *application) readIDParam(r *http.Request) (int64, error) {
 	params := httprouter.ParamsFromContext(r.Context())
 
