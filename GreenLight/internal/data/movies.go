@@ -1,6 +1,8 @@
 package data
 
 import (
+	"database/sql"
+	"log"
 	"time"
 )
 
@@ -19,4 +21,10 @@ type Movie struct {
 	Genres  []string `json:"genres,omitempty"`
 	Version int32    `json:"version"` // The version number starts at 1 and is incremented each
 	// time the movie information is updated.
+}
+
+type MovieModel struct {
+	DB       *sql.DB
+	InfoLog  *log.Logger
+	ErrorLog *log.Logger
 }

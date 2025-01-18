@@ -8,21 +8,21 @@ import (
 
 // healthcheckHandler 是健康检查端点的处理函数。
 // 它将服务的可用性、环境和版本信息写入响应中。
-func (app *application) healthcheckHandlerOld1(w http.ResponseWriter, r *http.Request) {
-	//fmt.Fprintln(w, "状态: 可用")
-	//fmt.Fprintf(w, "环境: %s\n", app.config.env)
-	//fmt.Fprintf(w, "版本: %s\n", version)
+// healthcheckHandler是作为application struct的方法，所以它需要一个指针。
+func (app *application) healthcheckHandlerOld(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "status: available")
+	fmt.Fprintf(w, "environment: %s\n", app.config.env)
+	fmt.Fprintf(w, "version: %s\n", version)
+}
 
-	// Create a fixed-format JSON response from a string. Notice how we're using a raw
-	// string literal (enclosed with backticks) so that we can include double-quote
-	// characters in the JSON without needing to escape them? We also use the %q verb to
-	// wrap the interpolated values in double-quotes.
+func (app *application) healthcheckHandlerOld1(w http.ResponseWriter, r *http.Request) {
+	// 使用字符串格式化来构建JSON。
 	js := `{"status": "available", "environment": %q, "version": %q}`
 	js = fmt.Sprintf(js, app.config.env, version)
 	// Set the "Content-Type: application/json" header on the response. If you forget to
 	// this, Go will default to sending a "Content-Type: text/plain; charset=utf-8"
 	// header instead.
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json") // 设置响应头
 	// Write the JSON as the HTTP response body.
 	w.Write([]byte(js))
 }
