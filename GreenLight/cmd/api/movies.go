@@ -16,7 +16,7 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 	fmt.Fprintln(w, "create a new movie")
 }
 
-// showMovieHandlerOld1 查看Movie
+// showMovieHandlerOld1 查看Movie（使用httprouter.ParamsFromContext(r.Context())读取路由）
 func (app *application) showMovieHandlerOld(w http.ResponseWriter, r *http.Request) {
 	// 获取路由参数
 	params := httprouter.ParamsFromContext(r.Context())
@@ -29,6 +29,7 @@ func (app *application) showMovieHandlerOld(w http.ResponseWriter, r *http.Reque
 	fmt.Fprintf(w, "show the details of movie %d\n", id)
 }
 
+// showMovieHandlerOld2 查看Movie（使用封装函数app.readIDParam(r)）
 func (app *application) showMovieHandlerOld1(w http.ResponseWriter, r *http.Request) {
 	// 获取路由参数（使用封装函数）
 	id, err := app.readIDParam(r)
@@ -40,15 +41,15 @@ func (app *application) showMovieHandlerOld1(w http.ResponseWriter, r *http.Requ
 	fmt.Fprintf(w, "show the details of movie %d\n", id)
 }
 
+// showMovieHandlerOld3 查看Movie（使用封装函数app.writeJSONOld(w, http.StatusOK, movie, nil)）
+// 使用结构体movie去传递
 func (app *application) showMovieHandlerOld2(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
-	// Create a new instance of the Movie struct, containing the ID we extracted from
-	// the URL and some dummy data. Also notice that we deliberately haven't set a
-	// value for the Year field.
+	// 使用结构体movie去传递
 	movie := data.Movie{
 		ID:        id,
 		CreatedAt: time.Now(),

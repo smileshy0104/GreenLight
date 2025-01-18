@@ -9,7 +9,8 @@ import (
 )
 
 // TODO 用于提供公共函数的Helpers包
-// Define an envelope type.
+
+// envelope 是一个键值对映射，用于封装响应数据。
 type envelope map[string]interface{}
 
 // readIDParam 读取路由中Id参数并返回
@@ -24,9 +25,7 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 	return id, nil
 }
 
-// Define a writeJSON() helper for sending responses. This takes the destination
-// http.ResponseWriter, the HTTP status code to send, the data to encode to JSON, and a
-// header map containing any additional HTTP headers we want to include in the response.
+// writeJSONOld 使用json.Marshal 函数将数据编码为JSON格式，并返回一个包含JSON数据的字节切片。
 func (app *application) writeJSONOld(w http.ResponseWriter, status int, data interface{}, headers http.Header) error {
 	// Encode the data to JSON, returning the error if there was one.
 	js, err := json.Marshal(data)
@@ -35,11 +34,7 @@ func (app *application) writeJSONOld(w http.ResponseWriter, status int, data int
 	}
 	// Append a newline to make it easier to view in terminal applications.
 	js = append(js, '\n')
-	// At this point, we know that we won't encounter any more errors before writing the
-	// response, so it's safe to add any headers that we want to include. We loop
-	// through the header map and add each header to the http.ResponseWriter header map.
-	// Note that it's OK if the provided header map is nil. Go doesn't throw an error
-	// if you try to range over (or generally, read from) a nil map.
+	// 设置任意头信息
 	for key, value := range headers {
 		w.Header()[key] = value
 	}
@@ -52,6 +47,7 @@ func (app *application) writeJSONOld(w http.ResponseWriter, status int, data int
 }
 
 // Change the data parameter to have the type envelope instead of interface{}.
+// writeJSON 使用json.MarshalIndent 函数将数据编码为JSON格式，将每个元素放在单独的行上，并使用可选的前缀和缩进字符。
 func (app *application) writeJSON(w http.ResponseWriter, status int, data envelope, headers http.Header) error {
 	js, err := json.MarshalIndent(data, "", "\t")
 	if err != nil {
