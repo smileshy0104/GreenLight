@@ -67,7 +67,7 @@ func (app *application) healthcheckHandlerOld3(w http.ResponseWriter, r *http.Re
 	}
 }
 
-// healthcheckHandler 使用封装的writeJSON()函数来构建JSON，然后使用json.Marshal()函数来编码它。而且调整了respond结构
+// healthcheckHandler 使用封装的writeJSON()函数来构建JSON，然后使用json.Marshal()函数来编码它。（使用统一的envelope作为统一响应数据结构）
 func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Request) {
 	// Declare an envelope map containing the data for the response. Notice that the way
 	// we've constructed this means the environment and version data will now be nested

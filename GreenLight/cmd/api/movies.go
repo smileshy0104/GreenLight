@@ -66,6 +66,7 @@ func (app *application) showMovieHandlerOld2(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// showMovieHandler 查看Movie（使用统一的envelope作为统一响应数据结构）
 func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {

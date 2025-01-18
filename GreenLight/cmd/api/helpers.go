@@ -10,7 +10,7 @@ import (
 
 // TODO 用于提供公共函数的Helpers包
 
-// envelope 是一个键值对映射，用于封装响应数据。
+// envelope 是一个键值对映射，用于封装响应数据。（统一响应数据结构）
 type envelope map[string]interface{}
 
 // readIDParam 读取路由中Id参数并返回
