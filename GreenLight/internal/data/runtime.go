@@ -65,7 +65,8 @@ func (r *Runtime) UnmarshalJSON(jsonValue []byte) error {
 		return ErrInvalidRuntimeFormat
 	}
 
-	// 将 int32 转换为 Runtime 类型并赋值给接收者
+	// 将int32转换为运行时类型，并将其分配给接收器。
+	// 请注意，我们使用*操作符来尊重接收器（它是一个指向运行时类型的指针），以设置指针的基础值。
 	*r = Runtime(i)
 
 	return nil
