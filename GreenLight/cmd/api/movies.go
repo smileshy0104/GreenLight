@@ -70,7 +70,10 @@ func (app *application) showMovieHandlerOld2(w http.ResponseWriter, r *http.Requ
 func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
-		http.NotFound(w, r)
+		// 使用未封装的http.NotFound()函数
+		//http.NotFound(w, r)
+		// Use the new notFoundResponse() helper.
+		app.notFoundResponse(w, r)
 		return
 	}
 	movie := data.Movie{
@@ -85,7 +88,10 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 	// of passing the plain movie struct.
 	err = app.writeJSON(w, http.StatusOK, envelope{"movie": movie}, nil)
 	if err != nil {
-		app.logger.Println(err)
-		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+		// 使用未封装的logger和http.Error()函数
+		//app.logger.Println(err)
+		//http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+		// Use the new serverErrorResponse() helper.
+		app.serverErrorResponse(w, r, err)
 	}
 }
