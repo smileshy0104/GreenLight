@@ -1,14 +1,23 @@
 package main
 
 import (
+	configFile "DesignMode/GreenLight/config"
 	"DesignMode/GreenLight/internal/data"
+	"context"      // New import
+	"database/sql" // New import
+	"embed"
 	"flag"
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+	// Import the pq driver so that it can register itself with the database/sql
+	// package. Note that we alias this import to the blank identifier, to stop the Go
+	// compiler complaining that the package isn't being used.
+	_ "github.com/lib/pq"
 )
 
 // 定义应用程序的版本号。
@@ -37,23 +46,43 @@ type application struct {
 	wg     sync.WaitGroup // 等待组
 }
 
+var f embed.FS
+
 // TestHttpServer 是一个测试函数，用于启动 HTTP 服务器。
 // 主要功能包括解析命令行参数、初始化日志记录器和应用程序结构体、设置路由并启动服务器。
 func main() {
 	// 定义配置结构体，用于存储服务器端口、环境变量等相关配置。
 	var cfg config
 
+	//初始化 - 配置文件
+	configFile.InitConfig(f)
 	// 解析命令行参数以初始化配置。
 	// TODO 端口和环境变量都可以在终端自定义
 	// go run ./cmd/api -port=3030 -env=production
 	flag.IntVar(&cfg.port, "port", 4000, "API 服务器端口")
 	flag.StringVar(&cfg.env, "env", "development", "环境 (development|staging|production)")
+
+	// TODO  postgres://username:password@localhost/db_name?sslmode=disable
+	flag.StringVar(&cfg.db.dsn, "db-dsn", "postgres://greenlight:pa55word@localhost/greenlight?sslmode=disable", "PostgreSQL DSN")
 	// 解析命令行参数以初始化配置。
 	flag.Parse()
 
 	// 初始化日志记录器。
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	//logger := jsonlog.NewLogger(os.Stdout, jsonlog.LevelInfo)
+
+	db, err := openDB(cfg)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	// Defer a call to db.Close() so that the connection pool is closed before the
+	// main() function exits.
+	defer db.Close()
+
+	// Also log a message to say that the connection pool has been successfully
+	// established.
+	logger.Printf("database connection pool established")
+	logger.Printf(viper.GetString("database.dsn"))
 
 	// 创建应用程序结构体，并初始化相关配置和日志记录器。
 	app := &application{
@@ -79,6 +108,29 @@ func main() {
 
 	// 启动 HTTP 服务器。
 	logger.Printf("正在启动 %s 环境下的服务器，监听地址为 %s", cfg.env, srv.Addr)
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	logger.Fatal(err)
+}
+
+// The openDB() function returns a sql.DB connection pool.
+func openDB(cfg config) (*sql.DB, error) {
+	// Use sql.Open() to create an empty connection pool, using the DSN from the config
+	// struct.
+	db, err := sql.Open("postgres", cfg.db.dsn)
+	if err != nil {
+		return nil, err
+	}
+	// Create a context with a 5-second timeout deadline.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	// Use PingContext() to establish a new connection to the database, passing in the
+	// context we created above as a parameter. If the connection couldn't be
+	// established successfully within the 5 second deadline, then this will return an
+	// error.
+	err = db.PingContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Return the sql.DB connection pool.
+	return db, nil
 }
