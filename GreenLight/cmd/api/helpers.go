@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 // TODO 用于提供公共函数的Helpers包
@@ -85,7 +86,22 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst int
 	//json.Unmarshal(body, dst)
 
 	// TODO 使用Decode解码请求体到目标指针中
-	err := json.NewDecoder(r.Body).Decode(dst)
+	//err := json.NewDecoder(r.Body).Decode(dst)
+
+	// Use http.MaxBytesReader() to limit the size of the request body to 1MB.
+	maxBytes := 1_048_576
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
+
+	// Initialize the json.Decoder, and call the DisallowUnknownFields() method on it
+	// before decoding. This means that if the JSON from the client now includes any
+	// field which cannot be mapped to the target destination, the decoder will return
+	// an error instead of just ignoring the field.
+	dec := json.NewDecoder(r.Body)
+	// 禁用未知字段，如果存在未知字段，则返回错误
+	dec.DisallowUnknownFields()
+	// 使用Decode方法将请求体解码到目标指针中
+	err := dec.Decode(dst)
+
 	if err != nil {
 		// 如果解码过程中出现错误，开始分类处理
 		var syntaxError *json.SyntaxError
@@ -112,6 +128,17 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst int
 		case errors.Is(err, io.EOF):
 			return errors.New("请求体不能为空")
 
+		// then Decode() will now return an error message in the format "json: unknown
+		// field "<name>"". We check for this, extract the field name from the error,
+		// and interpolate it into our custom error message.
+		case strings.HasPrefix(err.Error(), "json: unknown field "):
+			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
+			return fmt.Errorf("body contains unknown key %s", fieldName)
+		// If the request body exceeds 1MB in size the decode will now fail with the
+		// error "http: request body too large".
+		case err.Error() == "http: request body too large":
+			return fmt.Errorf("body must not be larger than %d bytes", maxBytes)
+
 		// 检查是否为无效解码错误，并触发 panic
 		case errors.As(err, &invalidUnmarshalError):
 			panic(err)
@@ -120,6 +147,14 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst int
 		default:
 			return err
 		}
+	}
+	// Call Decode() again, using a pointer to an empty anonymous struct as the destination.
+	// If the request body only contained a single JSON value this will
+	// return an io.EOF error. So if we get anything else, we know that there is
+	// additional data in the request body and we return our own custom error message.
+	err = dec.Decode(&struct{}{})
+	if err != io.EOF {
+		return errors.New("body must only contain a single JSON value")
 	}
 
 	return nil
