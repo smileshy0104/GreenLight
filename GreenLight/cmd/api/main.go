@@ -1,12 +1,13 @@
 package main
 
 import (
+	configFile "DesignMode/GreenLight/internal/config"
 	"DesignMode/GreenLight/internal/data"
 	"context"      // New import
 	"database/sql" // New import
+	"embed"
 	"flag"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"net/http"
 	"os"
@@ -44,6 +45,9 @@ type application struct {
 	wg     sync.WaitGroup // 等待组
 }
 
+//go:embed config/*
+var f embed.FS
+
 // TestHttpServer 是一个测试函数，用于启动 HTTP 服务器。
 // 主要功能包括解析命令行参数、初始化日志记录器和应用程序结构体、设置路由并启动服务器。
 func main() {
@@ -57,17 +61,18 @@ func main() {
 	flag.StringVar(&cfg.env, "env", "development", "环境 (development|staging|production)")
 
 	// TODO  postgres://username:password@localhost/db_name?sslmode=disable
-	// 设置配置文件名（不带扩展名）
-	viper.SetConfigName("config")
-	// 设置配置文件类型
-	viper.SetConfigType("yaml") // 可以是 json, toml, yaml 等
-	// 设置配置文件路径
-	viper.AddConfigPath(".\\GreenLight\\config") // 当前目录
-	// 读取配置文件
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Error reading config file, %s", err)
-	}
-	postgreSqlDsn := viper.GetString("database.dsn")
+	//// 设置配置文件名（不带扩展名）
+	//viper.SetConfigName("config")
+	//// 设置配置文件类型
+	//viper.SetConfigType("yaml") // 可以是 json, toml, yaml 等
+	//// 设置配置文件路径
+	//viper.AddConfigPath(".\\GreenLight\\config") // 当前目录
+	//// 读取配置文件
+	//if err := viper.ReadInConfig(); err != nil {
+	//	log.Fatalf("Error reading config file, %s", err)
+	//}
+	configFile.InitConfig(f)
+	postgreSqlDsn := configFile.AppConf.GetString("database.dsn")
 
 	flag.StringVar(&cfg.db.dsn, "db-dsn", postgreSqlDsn, "PostgreSQL DSN")
 
