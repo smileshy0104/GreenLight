@@ -119,6 +119,8 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 
 // Update updates a specific movie in the movies table.
 func (m MovieModel) Update(movie *Movie) error {
+	// 增加了个version条件，可以防止修改冲突的问题！！
+	// 因为version变成了个更新的添加，所以第二次更新不会成功！
 	query := `
 		UPDATE movies
 		SET title = $1, year = $2, runtime = $3, genres = $4, version = version + 1
@@ -133,10 +135,12 @@ func (m MovieModel) Update(movie *Movie) error {
 		movie.Runtime,
 		pq.Array(movie.Genres),
 		movie.ID,
-		movie.Version, // Add the expected movie version.
+		movie.Version, // 增加了个version字段，可以防止修改冲突的问题！！
 	}
 
 	// Create a context with a 3-second timeout.
+	// 使用context上下文的延时函数，超时则自动cancel
+	// 当对应的上下文context超时了，PostgreSql driver会发送对应的取消信号给数据库，程序会自动中断对应的查询！
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -146,7 +150,7 @@ func (m MovieModel) Update(movie *Movie) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
-			return ErrEditConflict
+			return ErrEditConflict // 返回字段版本冲突
 		default:
 			return err
 		}

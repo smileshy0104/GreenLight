@@ -21,7 +21,7 @@ func (app *application) routes() *httprouter.Router {
 	router.HandlerFunc(http.MethodPost, "/v1/movies", app.createMovieHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/movies/:id", app.showMovieHandler)
 	//router.HandlerFunc(http.MethodPut, "/v1/movies/:id", app.updateMovieHandler)
-	router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.updateMovieHandler)
+	router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.updateMovieHandler) // 更新电影信息的处理函数（Patch部分更新）。
 	router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.deleteMovieHandler)
 	// 返回路由实例
 	return router

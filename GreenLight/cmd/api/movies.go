@@ -281,8 +281,7 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// If the request contains a X-Expected-Version header, verify that the movie
-	// version in the database matches the expected version specified in the header.
+	// 如果请求包含X-Exped-Version标头，请验证电影数据库中的版本与标头中指定的预期版本匹配
 	if r.Header.Get("X-Expected-Version") != "" {
 		if strconv.FormatInt(int64(movie.Version), 32) != r.Header.Get("X-Expected-Version") {
 			app.editConflictResponse(w, r)
@@ -290,7 +289,7 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// Declare an input struct to hold the expected data from the client.
+	// 声明结构体 input，并且使用指针判断其输入是否为空！
 	var input struct {
 		//Title   string       `json:"title"`
 		//Year    int32        `json:"year"`
@@ -347,7 +346,7 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrEditConflict):
-			app.editConflictResponse(w, r)
+			app.editConflictResponse(w, r) // 使用未封装的editConflictResponse()函数
 		default:
 			app.serverErrorResponse(w, r, err)
 		}
