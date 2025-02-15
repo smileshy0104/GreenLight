@@ -8,23 +8,24 @@ import (
 	"fmt"
 	"github.com/lib/pq"
 	"log"
+	"strings"
 	"time"
 )
 
 // 定义Movie结构体（必须使用大写字母开头向外暴露）
 type Movie struct {
-	ID        int64     `json:"id"` // Unique integer ID for the movie
-	CreatedAt time.Time `json:"-"`  // Use the - directive to never export in JSON output
-	Title     string    `json:"title"`
-	Year      int32     `json:"year,omitempty"` // Movie release year0
+	ID        int64  `json:"id"` // Unique integer ID for the movie
+	CreatedAt int32  `json:"-"`  // Use the - directive to never export in JSON output
+	Title     string `json:"title"`
+	Year      int32  `json:"year,omitempty"` // Movie release year0
 	//Runtime   Runtime   `json:"runtime,omitempty"`
-	Runtime Runtime  `json:"runtime,omitempty,string"` // 增加string directive后，该字段在respond中会以string类型输出
-	Genres  []string `json:"genres,omitempty"`
-	Version int32    `json:"version"` // The version number starts at 1 and is incremented each
+	Runtime Runtime `json:"runtime,omitempty,string"` // 增加string directive后，该字段在respond中会以string类型输出
+	Genres  string  `json:"genres,omitempty"`
+	Version int32   `json:"version"` // The version number starts at 1 and is incremented each
 	// time the movie information is updated.
 }
 
-// ValidateMovie函数 （封装校验函数）——现在一般都集成在结构体中
+// ValidateMovie函数 （封装校验函数）
 func ValidateMovie(v *validator.Validator, movie *Movie) {
 	v.Check(movie.Title != "", "title", "must be provided")
 	v.Check(len(movie.Title) <= 500, "title", "must not be more than 500 bytes long")
@@ -33,10 +34,10 @@ func ValidateMovie(v *validator.Validator, movie *Movie) {
 	v.Check(movie.Year <= int32(time.Now().Year()), "year", "must not be in the future")
 	v.Check(movie.Runtime != 0, "runtime", "must be provided")
 	v.Check(movie.Runtime > 0, "runtime", "must be a positive integer")
-	v.Check(movie.Genres != nil, "genres", "must be provided")
-	v.Check(len(movie.Genres) >= 1, "genres", "must contain at least 1 genre")
-	v.Check(len(movie.Genres) <= 5, "genres", "must not contain more than 5 genres")
-	v.Check(validator.Unique(movie.Genres), "genres", "must not contain duplicate values")
+	v.Check(movie.Genres != "", "genres", "must be provided")
+	v.Check(len(strings.Split(movie.Genres, ",")) >= 1, "genres", "must contain at least 1 genre")
+	v.Check(len(strings.Split(movie.Genres, ",")) <= 5, "genres", "must not contain more than 5 genres")
+	v.Check(validator.Unique(strings.Split(movie.Genres, ",")), "genres", "must not contain duplicate values")
 }
 
 // MovieModel 结构体
@@ -46,32 +47,24 @@ type MovieModel struct {
 	ErrorLog *log.Logger
 }
 
-// Insert inserts a new record in the movies table and returns the Movie struct.
+// 创建一个movie
 func (m MovieModel) Insert(movie *Movie) error {
 	query := `
-		INSERT INTO movies (title, year, runtime, genres) 
-		VALUES ($1, $2, $3, $4) 
-		RETURNING id, created_at, version
+		INSERT INTO movies (created_at, title, year, runtime, genres) 
+		VALUES (?,?,?,?,?) 
 		`
-
-	// Create a context with a 3-second timeout.
+	// 通过context上下文的延时函数，超时则自动cancel
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	// Create an args slice containing the values for the placeholder parameters from the movie
-	// struct. Declaring this slice immediately next to our SQL query helps to make it nice and
-	// clear *what values are being user where* in the query
-	args := []interface{}{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres)}
+	// 执行查询
+	args := []interface{}{time.Now().Unix(), movie.Title, movie.Year, movie.Runtime, movie.Genres}
 
-	return m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+	return m.DB.QueryRowContext(ctx, query, args...).Err()
 }
 
-// Get gets a specific record from the movies table.
+// 获取一个movie
 func (m MovieModel) Get(id int64) (*Movie, error) {
-	// The PostgreSQL bigserial type that we're using for the movie ID starts auto-incrementing
-	// at 1 by default, so we know that no movies will have ID values less tan that.
-	// To avoid making an unnecessary database call,
-	// we take a shortcut and return an ErrRecordNotFound error straight away.
 	if id < 1 {
 		return nil, ErrRecordNotFound
 	}
@@ -79,31 +72,26 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 	query := `
 		SELECT id, created_at, title, year, runtime, genres, version
         FROM movies
- 		WHERE id = $1
+ 		WHERE id = ?
  		`
 
 	var movie Movie
 
-	// Use the context.WithTimeout() function to create a context.Context which carries a 3-second
-	// timeout deadline. Note, that we're using the empty context.Background() as the
-	// 'parent' context.
+	// 通过context上下文的延时函数，超时则自动cancel
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	// Defer cancel to make sure that we cancel the context before the Get() method returns
 	defer cancel()
 
-	// Use the QueryRowContext() method to execute the query, passing in the context with the
-	// deadline ctx as the first argument.
+	// 执行查询
 	err := m.DB.QueryRowContext(ctx, query, id).Scan(
 		&movie.ID,
 		&movie.CreatedAt,
 		&movie.Title,
 		&movie.Year,
 		&movie.Runtime,
-		pq.Array(&movie.Genres),
+		&movie.Genres,
 		&movie.Version)
 
-	// Handle any errors. If there was no matching movie found, Scan() will return a sql.ErrNoRows
-	// error. We check for this and return our custom ErrRecordNotFound error instead.
+	// 处理错误
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -116,35 +104,31 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 	return &movie, nil
 }
 
-// Update updates a specific movie in the movies table.
+// 更新一个movie
 func (m MovieModel) Update(movie *Movie) error {
 	// 增加了个version条件，可以防止修改冲突的问题！！
 	// 因为version变成了个更新的添加，所以第二次更新不会成功！
 	query := `
 		UPDATE movies
-		SET title = $1, year = $2, runtime = $3, genres = $4, version = version + 1
-		WHERE id = $5 AND version = $6
-		RETURNING version
+		SET title = ?, year = ?, runtime = ?, genres = ?, version = version + 1
+		WHERE id = ? AND version = ?
 		`
 
-	// Create an args slice containing the values for the placeholder parameters.
 	args := []interface{}{
 		movie.Title,
 		movie.Year,
 		movie.Runtime,
-		pq.Array(movie.Genres),
+		movie.Genres,
 		movie.ID,
 		movie.Version, // 增加了个version字段，可以防止修改冲突的问题！！
 	}
 
-	// Create a context with a 3-second timeout.
 	// 使用context上下文的延时函数，超时则自动cancel
 	// 当对应的上下文context超时了，PostgreSql driver会发送对应的取消信号给数据库，程序会自动中断对应的查询！
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	// Execute the SQL query. If no matching row could be found, we know the movie version
-	// has changed (or the record has been deleted) and we return ErrEditConflict.
+	// 执行查询
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.Version)
 	if err != nil {
 		switch {

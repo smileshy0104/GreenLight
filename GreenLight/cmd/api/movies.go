@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -122,15 +123,14 @@ func (app *application) createMovieHandlerOld4(w http.ResponseWriter, r *http.Re
 
 // createMovieHandler 创建Movie（使用校验器validator）
 func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Request) {
+	// 声明一个匿名结构体，用于存储从 HTTP 请求体中预期获取的信息。
 	var input struct {
 		Title   string       `json:"title"`
 		Year    int32        `json:"year"`
 		Runtime data.Runtime `json:"runtime"` // Make this field a data.Runtime type.
 		Genres  []string     `json:"genres"`
 	}
-	// Use the new readJSON() helper to decode the request body into the input struct.
-	// If this returns an error we send the client the error message along with a 400
-	// Bad Request status code, just like before.
+	// 读取请求体
 	err := app.readJSON(w, r, &input)
 	if err != nil {
 		//app.errorResponse(w, r, http.StatusBadRequest, err.Error())
@@ -143,7 +143,7 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		Title:   input.Title,
 		Year:    input.Year,
 		Runtime: input.Runtime,
-		Genres:  input.Genres,
+		Genres:  strings.Join(input.Genres, ","),
 	}
 	// 创建校验器实例
 	v := validator.New()
@@ -154,28 +154,22 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Call the Insert() method on our movies model, passing in a pointer to the
-	// validated movie struct. This will create a record in the database and update the
-	// movie struct with the system-generated information.
+	// 将movie插入数据库
 	err = app.models.Movies.Insert(movie)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	// When sending a HTTP response, we want to include a Location header to let the
-	// client know which URL they can find the newly-created resource at. We make an
-	// empty http.Header map and then use the Set() method to add a new Location header,
-	// interpolating the system-generated ID for our new movie in the URL.
+	// 创建Location响应头
 	headers := make(http.Header)
 	headers.Set("Location", fmt.Sprintf("/v1/movies/%d", movie.ID))
-	// Write a JSON response with a 201 Created status code, the movie data in the
-	// response body, and the Location header.
+	// 将movie返回给客户端
 	err = app.writeJSON(w, http.StatusCreated, envelope{"movie": movie}, headers)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
 
-	fmt.Fprintf(w, "%+v\n", input)
+	//fmt.Fprintf(w, "%+v\n", input)
 }
 
 // showMovieHandlerOld1 查看Movie（使用httprouter.ParamsFromContext(r.Context())读取路由）
@@ -214,10 +208,10 @@ func (app *application) showMovieHandlerOld2(w http.ResponseWriter, r *http.Requ
 	// 使用结构体movie去传递
 	movie := data.Movie{
 		ID:        id,
-		CreatedAt: time.Now(),
+		CreatedAt: int32(time.Now().Unix()),
 		Title:     "Casablanca",
 		Runtime:   102,
-		Genres:    []string{"drama", "romance", "war"},
+		Genres:    strings.Join([]string{"drama", "romance", "war"}, ","),
 		Version:   1,
 	}
 	// Encode the struct to JSON and send it as the HTTP response.
@@ -262,14 +256,13 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 
 // updateMovieHandler 更新Movie
 func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Request) {
-	// Extract the movie ID from the URL.
+	// 获取路由参数
 	id, err := app.readIDParam(r)
 	if err != nil {
 		app.notFoundResponse(w, r)
 		return
 	}
-	// Fetch the existing movie record from the database, sending a 404 Not Found
-	// response to the client if we couldn't find a matching record.
+	// 获取对应id的movie
 	movie, err := app.models.Movies.Get(id)
 	if err != nil {
 		switch {
@@ -294,10 +287,12 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		//Title   string       `json:"title"`
 		//Year    int32        `json:"year"`
 		//Runtime data.Runtime `json:"runtime"`
+		ID      int64         `json:"id"`
 		Title   *string       `json:"title"`
 		Year    *int32        `json:"year"`
 		Runtime *data.Runtime `json:"runtime"`
 		Genres  []string      `json:"genres"`
+		Version *int32        `json:"version"`
 	}
 	// Read the JSON request body data into the input struct.
 	err = app.readJSON(w, r, &input)
@@ -306,20 +301,12 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	// TODO 整个更新使用PUT
-	// Copy the values from the request body to the appropriate fields of the movie
-	// record.
 	//movie.Title = input.Title
 	//movie.Year = input.Year
 	//movie.Runtime = input.Runtime
 	//movie.Genres = input.Genres
 
 	// TODO 部分更新使用PATCH
-	// If the input.Title value is nil then we know that no corresponding "title" key/
-	// value pair was provided in the JSON request body. So we move on and leave the
-	// movie record unchanged. Otherwise, we update the movie record with the new title
-	// value. Importantly, because input.Title is a now a pointer to a string, we need
-	// to dereference the pointer using the * operator to get the underlying value
-	// before assigning it to our movie record.
 	if input.Title != nil {
 		movie.Title = *input.Title
 	}
@@ -331,17 +318,16 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		movie.Runtime = *input.Runtime
 	}
 	if input.Genres != nil {
-		movie.Genres = input.Genres // Note that we don't need to dereference a slice.
+		movie.Genres = strings.Join(input.Genres, ",") // Note that we don't need to dereference a slice.
 	}
 
-	// Validate the updated movie record, sending the client a 422 Unprocessable Entity
-	// response if any checks fail.
+	// 校验器
 	v := validator.New()
 	if data.ValidateMovie(v, movie); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
-	// Pass the updated movie record to our new Update() method.
+	// 更新Movie
 	err = app.models.Movies.Update(movie)
 	if err != nil {
 		switch {
@@ -352,7 +338,7 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		}
 		return
 	}
-	// Write the updated movie record in a JSON response.
+	// 使用writeJSON()函数
 	err = app.writeJSON(w, http.StatusOK, envelope{"movie": movie}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

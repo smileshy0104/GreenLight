@@ -105,7 +105,7 @@ func main() {
 	// 配置 HTTP 服务器。
 	// TODO 使用 httprouter 作为请求路由器，并设置相关配置。
 	srv := &http.Server{
-		Addr: fmt.Sprintf(":%d", cfg.port), // 设置监听地址和端口
+		Addr: fmt.Sprintf("0.0.0.0:%d", cfg.port), // 设置监听地址和端口
 		//Handler:      mux,                 // 设置请求路由器
 		Handler:      app.routes(),     // 设置请求路由器
 		IdleTimeout:  time.Minute,      // 空闲超时
@@ -124,11 +124,9 @@ func main() {
 func openDB(cfg config) (*sql.DB, error) {
 	// 使用数据库连接池配置，创建并返回一个数据库连接池。
 	conn, err := gorm.Open(mysql.Open(cfg.db.dsn))
-
 	if err != nil {
 		return nil, err
 	}
-
 	//设置数据库连接池参数
 	sqlDB, _ := conn.DB()
 	// 设置连接池的最大打开连接数。
