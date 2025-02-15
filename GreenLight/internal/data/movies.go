@@ -129,7 +129,7 @@ func (m MovieModel) Update(movie *Movie) error {
 	defer cancel()
 
 	// 执行查询
-	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.Version)
+	err := m.DB.QueryRowContext(ctx, query, args...).Err()
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):

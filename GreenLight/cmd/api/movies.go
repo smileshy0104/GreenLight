@@ -292,7 +292,6 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		Year    *int32        `json:"year"`
 		Runtime *data.Runtime `json:"runtime"`
 		Genres  []string      `json:"genres"`
-		Version *int32        `json:"version"`
 	}
 	// Read the JSON request body data into the input struct.
 	err = app.readJSON(w, r, &input)
