@@ -100,6 +100,7 @@ func (app *application) inactiveAccountResponse(w http.ResponseWriter, r *http.R
 }
 
 // notPermittedResponse 向客户端发送403禁止状态码和JSON格式的错误消息。
+// 注意，此帮助函数用于处理没有权限访问资源的用户。
 func (app *application) notPermittedResponse(w http.ResponseWriter, r *http.Request) {
 	message := "your user account doesn't have the necessary permissions to access this resource"
 	app.errorResponse(w, r, http.StatusForbidden, message)

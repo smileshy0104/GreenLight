@@ -388,34 +388,34 @@ func (app *application) deleteMovieHandler(w http.ResponseWriter, r *http.Reques
 
 // listMoviesHandler 电影列表
 func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request) {
+	// 声明结构体 input
 	var input struct {
 		Title  string
 		Genres []string
 		data.Filters
 	}
 	v := validator.New()
+	// 获取查询字符串参数
 	qs := r.URL.Query()
 	input.Title = app.readString(qs, "title", "")
 	input.Genres = app.readCSV(qs, "genres", []string{})
 	input.Filters.Page = app.readInt(qs, "page", 1, v)
 	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
 	input.Filters.Sort = app.readString(qs, "sort", "id")
-	// Add the supported sort values for this endpoint to the sort safelist.
+	// 使用一个硬编码的slice来验证用户输入的排序参数
 	input.Filters.SortSafeList = []string{"id", "title", "year", "runtime", "-id", "-title", "-year", "-runtime"}
-	// Execute the validation checks on the Filters struct and send a response
-	// containing the errors if necessary.
+	// 验证过滤器
 	if data.ValidateFilters(v, input.Filters); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
-	// Call the GetAll() method to retrieve the movies, passing in the various filter
-	// parameters.
+	// 调用MovieModel的GetAll()方法获取电影列表
 	movies, _, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	// Send a JSON response containing the movie data.
+	// 将电影列表写入JSON响应
 	err = app.writeJSON(w, http.StatusOK, envelope{"movies": movies}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

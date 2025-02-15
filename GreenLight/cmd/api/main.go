@@ -3,11 +3,13 @@ package main
 import (
 	configFile "DesignMode/GreenLight/internal/config"
 	"DesignMode/GreenLight/internal/data"
-	"context"      // New import
-	"database/sql" // New import
+	"context" // New import
+	"database/sql"
 	"embed"
 	"flag"
 	"fmt"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"os"
@@ -121,29 +123,32 @@ func main() {
 // openDB()函数用于创建并返回一个数据库连接池。
 func openDB(cfg config) (*sql.DB, error) {
 	// 使用数据库连接池配置，创建并返回一个数据库连接池。
-	db, err := sql.Open("postgres", cfg.db.dsn)
+	conn, err := gorm.Open(mysql.Open(cfg.db.dsn))
+
 	if err != nil {
 		return nil, err
 	}
 
+	//设置数据库连接池参数
+	sqlDB, _ := conn.DB()
 	// 设置连接池的最大打开连接数。
-	db.SetMaxOpenConns(cfg.db.maxOpenConns)
+	sqlDB.SetMaxOpenConns(cfg.db.maxOpenConns)
 	// 设置连接池的最大空闲连接数。
-	db.SetMaxIdleConns(cfg.db.maxIdleConns)
+	sqlDB.SetMaxIdleConns(cfg.db.maxIdleConns)
 	// 设置连接池中每个连接的最大空闲时间。
 	duration, err := time.ParseDuration(cfg.db.maxIdleTime)
 	if err != nil {
 		return nil, err
 	}
-	db.SetConnMaxIdleTime(duration)
+	sqlDB.SetConnMaxIdleTime(duration)
 
 	// 创建一个上下文，并设置5秒超时。
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	// 使用PingContext()方法执行ping操作，以确认连接池是否工作正常。
-	err = db.PingContext(ctx)
+	err = sqlDB.PingContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return db, nil
+	return sqlDB, nil
 }

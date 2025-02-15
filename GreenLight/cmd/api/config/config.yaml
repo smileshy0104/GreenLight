@@ -1,6 +1,6 @@
 database:
   #dsn信息
-  dsn: "postgres://greenlight:pa55word@localhost/greenlight?sslmode=disable"
+  dsn: "root:root@tcp(localhost:3306)/greenlight?parseTime=true&loc=Local"
   # 设置空闲连接池中连接的最大数量(-1 不限制)
   max-idle-conns: 10
   # 设置打开数据库连接的最大数量。(-1 不限制)
@@ -8,4 +8,4 @@ database:
   # 设置了连接可复用的最大时间。(单位秒)(-1 不限制)
   conn-max-lifetime: 3600
 
-dsn: "postgres://greenlight:pa55word@localhost/greenlight?sslmode=disable"
+dsn: "root:root@tcp(localhost:3306)/greenlight?parseTime=true&loc=Local"
