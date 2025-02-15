@@ -26,7 +26,6 @@ const version = "1.0.0"
 type config struct {
 	port int    // 端口
 	env  string // 环境
-	// For now this only holds the DSN, which we read in from a command-line flag.
 	// 数据库相关配置信息，用于数据库连接池配置
 	db struct {
 		dsn          string
@@ -71,13 +70,13 @@ func main() {
 	//if err := viper.ReadInConfig(); err != nil {
 	//	log.Fatalf("Error reading config file, %s", err)
 	//}
+	// 初始化配置文件
 	configFile.InitConfig(f)
 	postgreSqlDsn := configFile.AppConf.GetString("database.dsn")
 
+	// 设置命令行参数，用于配置数据库连接信息。q
 	flag.StringVar(&cfg.db.dsn, "db-dsn", postgreSqlDsn, "PostgreSQL DSN")
-
-	// Read the connection pool settings from command-line flags into the config struct.
-	// Notice the default values that we're using?
+	// 设置数据库连接池配置
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
@@ -89,16 +88,14 @@ func main() {
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	//logger := jsonlog.NewLogger(os.Stdout, jsonlog.LevelInfo)
 
+	// 尝试打开数据库连接池。
 	db, err := openDB(cfg)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	// Defer a call to db.Close() so that the connection pool is closed before the
-	// main() function exits.
 	defer db.Close()
 
-	// Also log a message to say that the connection pool has been successfully
-	// established.
+	// 创建一个日志记录器，并记录一条消息，表示数据库连接池已建立。
 	logger.Printf("database connection pool established")
 
 	// 创建应用程序结构体，并初始化相关配置和日志记录器。
@@ -126,45 +123,37 @@ func main() {
 
 	// 启动 HTTP 服务器。
 	logger.Printf("正在启动 %s 环境下的服务器，监听地址为 %s", cfg.env, srv.Addr)
+	// 使用srv.ListenAndServe()方法启动服务器，并记录任何错误。
 	err = srv.ListenAndServe()
 	logger.Fatal(err)
 }
 
-// The openDB() function returns a sql.DB connection pool.
+// openDB()函数用于创建并返回一个数据库连接池。
 func openDB(cfg config) (*sql.DB, error) {
-	// Use sql.Open() to create an empty connection pool, using the DSN from the config
-	// struct.
+	// 使用数据库连接池配置，创建并返回一个数据库连接池。
 	db, err := sql.Open("postgres", cfg.db.dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set the maximum number of open (in-use + idle) connections in the pool. Note that
-	// passing a value less than or equal to 0 will mean there is no limit.
+	// 设置连接池的最大打开连接数。
 	db.SetMaxOpenConns(cfg.db.maxOpenConns)
-	// Set the maximum number of idle connections in the pool. Again, passing a value
-	// less than or equal to 0 will mean there is no limit.
+	// 设置连接池的最大空闲连接数。
 	db.SetMaxIdleConns(cfg.db.maxIdleConns)
-	// Use the time.ParseDuration() function to convert the idle timeout duration string
-	// to a time.Duration type.
+	// 设置连接池中每个连接的最大空闲时间。
 	duration, err := time.ParseDuration(cfg.db.maxIdleTime)
 	if err != nil {
 		return nil, err
 	}
-	// Set the maximum idle timeout.
 	db.SetConnMaxIdleTime(duration)
 
-	// Create a context with a 5-second timeout deadline.
+	// 创建一个上下文，并设置5秒超时。
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	// Use PingContext() to establish a new connection to the database, passing in the
-	// context we created above as a parameter. If the connection couldn't be
-	// established successfully within the 5 second deadline, then this will return an
-	// error.
+	// 使用PingContext()方法执行ping操作，以确认连接池是否工作正常。
 	err = db.PingContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	// Return the sql.DB connection pool.
 	return db, nil
 }
