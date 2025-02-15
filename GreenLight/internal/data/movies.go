@@ -24,7 +24,7 @@ type Movie struct {
 	// time the movie information is updated.
 }
 
-// ValidateMovie函数 （封装校验函数）
+// ValidateMovie函数 （封装校验函数）——现在一般都集成在结构体中
 func ValidateMovie(v *validator.Validator, movie *Movie) {
 	v.Check(movie.Title != "", "title", "must be provided")
 	v.Check(len(movie.Title) <= 500, "title", "must not be more than 500 bytes long")
@@ -39,14 +39,14 @@ func ValidateMovie(v *validator.Validator, movie *Movie) {
 	v.Check(validator.Unique(movie.Genres), "genres", "must not contain duplicate values")
 }
 
+// MovieModel 结构体
 type MovieModel struct {
 	DB       *sql.DB
 	InfoLog  *log.Logger
 	ErrorLog *log.Logger
 }
 
-// Insert accepts a pointer to a movie struct, which should contain the data for the
-// new record and inserts the record into the movies table.
+// Insert inserts a new record in the movies table and returns the Movie struct.
 func (m MovieModel) Insert(movie *Movie) error {
 	query := `
 		INSERT INTO movies (title, year, runtime, genres) 
@@ -66,8 +66,7 @@ func (m MovieModel) Insert(movie *Movie) error {
 	return m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
-// Get fetches a record from the movies table and returns the corresponding Movie struct.
-// It cancels the query call if the SQL query does not finish within 3 seconds.
+// Get gets a specific record from the movies table.
 func (m MovieModel) Get(id int64) (*Movie, error) {
 	// The PostgreSQL bigserial type that we're using for the movie ID starts auto-incrementing
 	// at 1 by default, so we know that no movies will have ID values less tan that.
@@ -159,7 +158,7 @@ func (m MovieModel) Update(movie *Movie) error {
 	return nil
 }
 
-// Delete is a placeholder method for deleting a specific record in the movies table.
+// Delete deletes a specific record from the movies table.
 func (m MovieModel) Delete(id int64) error {
 	// Return an ErrRecordNotFound error if the movie ID is less than 1
 	if id < 1 {

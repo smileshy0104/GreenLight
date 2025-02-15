@@ -7,10 +7,11 @@ import (
 	"time"
 )
 
-// Permissions holds the permission codes for a single user.
+// Permissions 存放用户权限
 type Permissions []string
 
-// Include checks whether the Permissions slice contains a specific permission code.
+// Include 方法，判断权限是否包含指定代码
+// 如果包含则返回true，否则返回false
 func (p Permissions) Include(code string) bool {
 	for i := range p {
 		if code == p[i] {
@@ -21,13 +22,14 @@ func (p Permissions) Include(code string) bool {
 	return false
 }
 
+// PermissionModel 结构体
 type PermissionModel struct {
 	DB       *sql.DB
 	InfoLog  *log.Logger
 	ErrorLog *log.Logger
 }
 
-// GetAllForUser returns all permission codes for a specific user in a Permissions slice.
+// GetAllForUser 方法，获取用户的权限
 func (m PermissionModel) GetAllForUser(userID int64) (Permissions, error) {
 	query := `
 		SELECT permissions.code

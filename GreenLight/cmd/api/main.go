@@ -60,16 +60,6 @@ func main() {
 	flag.StringVar(&cfg.env, "env", "development", "环境 (development|staging|production)")
 
 	// TODO  postgres://username:password@localhost/db_name?sslmode=disable
-	//// 设置配置文件名（不带扩展名）
-	//viper.SetConfigName("config")
-	//// 设置配置文件类型
-	//viper.SetConfigType("yaml") // 可以是 json, toml, yaml 等
-	//// 设置配置文件路径
-	//viper.AddConfigPath(".\\GreenLight\\config") // 当前目录
-	//// 读取配置文件
-	//if err := viper.ReadInConfig(); err != nil {
-	//	log.Fatalf("Error reading config file, %s", err)
-	//}
 	// 初始化配置文件
 	configFile.InitConfig(f)
 	postgreSqlDsn := configFile.AppConf.GetString("database.dsn")

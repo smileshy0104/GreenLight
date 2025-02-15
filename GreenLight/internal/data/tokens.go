@@ -36,7 +36,7 @@ type (
 	}
 )
 
-// New creates a new token and inserts the token record into the tokens table.
+// 创建一个TokenModel对象，并初始化其DB、InfoLog和ErrorLog字段。
 func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
 	token, err := generateToken(userID, ttl, scope)
 	if err != nil {
@@ -48,7 +48,7 @@ func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, 
 
 }
 
-// Insert inserts a new token record into the tokens table.
+// 插入一个Token对象到数据库中，并返回可能的错误。
 func (m TokenModel) Insert(token *Token) error {
 	query := `
 		INSERT INTO tokens (hash, user_id, expiry, scope)
@@ -64,7 +64,7 @@ func (m TokenModel) Insert(token *Token) error {
 	return err
 }
 
-// DeleteAllForUser deletes all tokens for a specific user and scope.
+// 删除给定用户ID和作用域的所有令牌记录。
 func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
 	query := `
 		DELETE FROM tokens
@@ -78,6 +78,7 @@ func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
 	return err
 }
 
+// 生成一个Token对象，其中包含了用户ID、过期时间和作用域信息。
 func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error) {
 	// Create a Token instance containing the user ID, expiry, and scope information.
 	// Notice that we add the provided ttl (time-to-live) duration parameter to the
