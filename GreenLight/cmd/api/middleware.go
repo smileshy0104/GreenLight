@@ -111,25 +111,32 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 	}()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 取出请求的IP地址
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
-			return
-		}
-		mu.Lock()
-		// 如果该IP地址不在map中，则创建一个新的rate.Limiter对象，并将其添加到map中。
-		if _, found := clients[ip]; !found {
-			clients[ip] = &client{limiter: rate.NewLimiter(2, 4)}
-		}
-		// 更新最后使用时间
-		clients[ip].lastSeen = time.Now()
-		if !clients[ip].limiter.Allow() {
+		// 动态获取ratelimit配置，如果启用了速率限制，则执行以下操作。
+		if app.config.limiter.enabled {
+			// 取出请求的IP地址
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				app.serverErrorResponse(w, r, err)
+				return
+			}
+			mu.Lock()
+			// 如果该IP地址不在map中，则创建一个新的rate.Limiter对象，并将其添加到map中。
+			if _, found := clients[ip]; !found {
+				//clients[ip] = &client{limiter: rate.NewLimiter(2, 4)}
+				clients[ip] = &client{
+					// 设置其速率为2个请求/秒，并且最多允许4个请求。
+					limiter: rate.NewLimiter(rate.Limit(app.config.limiter.rps), app.config.limiter.burst),
+				}
+			}
+			// 更新最后使用时间
+			clients[ip].lastSeen = time.Now()
+			if !clients[ip].limiter.Allow() {
+				mu.Unlock()
+				app.rateLimitExceededResponse(w, r)
+				return
+			}
 			mu.Unlock()
-			app.rateLimitExceededResponse(w, r)
-			return
 		}
-		mu.Unlock()
 		next.ServeHTTP(w, r)
 	})
 }
