@@ -8,11 +8,8 @@ import (
 	"database/sql"
 	"embed"
 	"flag"
-	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"log"
-	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -106,9 +103,16 @@ func main() {
 
 	// 创建应用程序结构体，并初始化相关配置和日志记录器。
 	app := &application{
+		wg:     sync.WaitGroup{},
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+	}
+
+	// 启动应用程序。
+	err = app.serve()
+	if err != nil {
+		logger.PrintFatal(err, nil)
 	}
 
 	// 初始化请求路由器。
@@ -118,24 +122,24 @@ func main() {
 
 	// 配置 HTTP 服务器。
 	// TODO 使用 httprouter 作为请求路由器，并设置相关配置。
-	srv := &http.Server{
-		Addr: fmt.Sprintf("0.0.0.0:%d", cfg.port), // 设置监听地址和端口
-		//Handler:      mux,                 // 设置请求路由器
-		Handler:      app.routes(),     // 设置请求路由器
-		IdleTimeout:  time.Minute,      // 空闲超时
-		ReadTimeout:  10 * time.Second, // 读取超时
-		WriteTimeout: 30 * time.Second, // 写入超时
-		ErrorLog:     log.New(logger, "", 0),
-	}
-
-	// 启动 HTTP 服务器。
-	//logger.Printf("正在启动 %s 环境下的服务器，监听地址为 %s", cfg.env, srv.Addr)
-	logger.PrintInfo("starting server", map[string]string{
-		"addr": srv.Addr,
-		"env":  cfg.env,
-	})
+	//srv := &http.Server{
+	//	Addr: fmt.Sprintf("0.0.0.0:%d", cfg.port), // 设置监听地址和端口
+	//	//Handler:      mux,                 // 设置请求路由器
+	//	Handler:      app.routes(),     // 设置请求路由器
+	//	IdleTimeout:  time.Minute,      // 空闲超时
+	//	ReadTimeout:  10 * time.Second, // 读取超时
+	//	WriteTimeout: 30 * time.Second, // 写入超时
+	//	ErrorLog:     log.New(logger, "", 0),
+	//}
+	//
+	//// 启动 HTTP 服务器。
+	////logger.Printf("正在启动 %s 环境下的服务器，监听地址为 %s", cfg.env, srv.Addr)
+	//logger.PrintInfo("starting server", map[string]string{
+	//	"addr": srv.Addr,
+	//	"env":  cfg.env,
+	//})
 	// 使用srv.ListenAndServe()方法启动服务器，并记录任何错误。
-	err = srv.ListenAndServe()
+	//err = srv.ListenAndServe()
 	//logger.Fatal(err)
 	logger.PrintFatal(err, nil)
 }
