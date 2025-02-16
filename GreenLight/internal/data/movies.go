@@ -185,8 +185,10 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 	}
 
 	// 添加genres条件
-	if len(genres) > 0 {
+	if len(genres) > 0 && title != "" {
 		query += fmt.Sprintf(" AND genres LIKE \"%s\"", "%"+strings.Join(genres, ",")+"%")
+	} else if len(genres) > 0 && title == "" {
+		query += fmt.Sprintf(" WHERE genres LIKE \"%s\"", "%"+strings.Join(genres, ",")+"%")
 	}
 
 	// 添加排序
@@ -204,6 +206,7 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 
 	// 获取所有movie
 	rows, err := m.DB.QueryContext(ctx, query, args...)
+
 	if err != nil {
 		return nil, Metadata{}, err
 	}
