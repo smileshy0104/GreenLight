@@ -33,13 +33,13 @@ func (u *User) IsAnonymous() bool {
 
 // User 结构体
 type User struct {
-	ID        int64     `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Password  password  `json:"-"`
-	Activated bool      `json:"activated"`
-	Version   int       `json:"-"`
+	ID        int64    `json:"id"`
+	CreatedAt string   `json:"created_at"`
+	Name      string   `json:"name"`
+	Email     string   `json:"email"`
+	Password  password `json:"-"`
+	Activated bool     `json:"activated"`
+	Version   int      `json:"-"`
 }
 
 // password 结构体

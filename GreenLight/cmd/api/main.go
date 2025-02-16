@@ -4,6 +4,7 @@ import (
 	configFile "DesignMode/GreenLight/internal/config"
 	"DesignMode/GreenLight/internal/data"
 	"DesignMode/GreenLight/internal/jsonlog"
+	"DesignMode/GreenLight/internal/mailer"
 	"context" // New import
 	"database/sql"
 	"embed"
@@ -39,6 +40,14 @@ type config struct {
 		burst   int
 		enabled bool
 	}
+	// 邮件相关配置
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
 }
 
 // application 结构体包含配置和日志记录器。
@@ -48,6 +57,7 @@ type application struct {
 	logger *jsonlog.Logger // json日志记录器（自定义）
 	models data.Models     // 数据库模型
 	wg     sync.WaitGroup  // 等待组
+	mailer mailer.Mailer
 }
 
 //go:embed config/*
@@ -81,6 +91,14 @@ func main() {
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
+
+	// 设置邮件服务器配置
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", "0abf276416b183", "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", "d8672aa2264bb5", "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.alexedwards.net>", "SMTP sender")
+
 	// 解析命令行参数以初始化配置。
 	flag.Parse()
 
@@ -107,6 +125,7 @@ func main() {
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 	// 启动应用程序。

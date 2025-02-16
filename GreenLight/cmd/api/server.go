@@ -48,17 +48,6 @@ func (app *application) serve() error {
 			shutdownError <- err
 		}
 
-		// 创建一个goroutine，用于等待所有后台goroutine完成，并记录任何错误。
-		app.logger.PrintInfo("completing background tasks", map[string]string{
-			"addr": srv.Addr,
-		})
-
-		// 等待所有后台goroutine完成
-		app.wg.Wait()
-
-		// 关闭shutdownError通道，并记录任何错误。
-		shutdownError <- nil
-
 		//// 使用app.logger.PrintInfo()记录接收到的信号。
 		//app.logger.PrintInfo("caught signal", map[string]string{
 		//	"signal": s.String(),
