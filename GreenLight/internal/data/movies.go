@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/lib/pq"
 	"log"
 	"strings"
 	"time"
@@ -177,77 +176,82 @@ func (m MovieModel) Delete(id int64) error {
 // 获取所有movie
 func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error) {
 	query := fmt.Sprintf(`
-		SELECT count(*) OVER(), id, created_at, title, year, runtime, genres, version
+		SELECT id, created_at, title, year, runtime, genres, version
 		FROM movies
-		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
-		AND (genres @> $2 OR $2 = '{}')
-		ORDER BY %s %s, id ASC
-		LIMIT $3 OFFSET $4`,
-		filters.sortColumn(), filters.sortDirection())
+		`)
+	// 添加title条件
+	if title != "" {
+		query += fmt.Sprintf(" WHERE title LIKE \"%s\"", "%"+title+"%")
+	}
 
-	// Create a context with a 3-second timeout.
+	// 添加genres条件
+	if len(genres) > 0 {
+		query += fmt.Sprintf(" AND genres LIKE \"%s\"", "%"+strings.Join(genres, ",")+"%")
+	}
+
+	// 添加排序
+	query += fmt.Sprintf(" ORDER BY %s %s", filters.sortColumn(), filters.sortDirection())
+
+	// 添加分页
+	query += fmt.Sprintf(" LIMIT ? OFFSET ?")
+
+	// 通过context上下文的延时函数，超时则自动cancel
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	// Organize our four placeholder parameter values in a slice.
-	args := []interface{}{title, pq.Array(genres), filters.limit(), filters.offset()}
+	// 执行查询
+	args := []interface{}{filters.limit(), filters.offset()}
 
-	// Use QueryContext to execute the query. This returns a sql.Rows result set containing
-	// the result.
+	// 获取所有movie
 	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, Metadata{}, err
 	}
 
-	// Importantly, defer a call to rows.Close() to ensure that the result set is closed
-	// before GetAll returns.
+	// 延迟关闭rows
 	defer func() {
 		if err := rows.Close(); err != nil {
 			m.ErrorLog.Println(err)
 		}
 	}()
 
-	// Declare a totalRecords variable
+	// 初始化一个totalRecords变量，用于存储查询结果中的总记录数
 	totalRecords := 0
 
-	// Initialize an empty slice to hold the movie data.
+	// 初始化一个movies变量，用于存储查询结果
 	movies := []*Movie{}
 
-	// Use rows.Next to iterate through the rows in the result set.
+	// 遍历rows
 	for rows.Next() {
-		// Initialize an empty Movie struct to hold the data for an individual movie.
+		// 创建一个Movie变量，用于存储查询结果
 		var movie Movie
 
-		// Scan the values from the row into the Movie struct. Again, note that we're using
-		// the pq.Array adapter on the genres field.
+		// 使用rows.Scan()方法将查询结果中的列值赋值给movie变量
 		err := rows.Scan(
-			&totalRecords, // Scan the count from the window function into totalRecords.
+			//&totalRecords, // Scan the count from the window function into totalRecords.
 			&movie.ID,
 			&movie.CreatedAt,
 			&movie.Title,
 			&movie.Year,
 			&movie.Runtime,
-			pq.Array(&movie.Genres),
+			&movie.Genres,
 			&movie.Version,
 		)
 		if err != nil {
 			return nil, Metadata{}, err
 		}
 
-		// Add the Movie struct to the slice
+		// 将movie变量添加到movies切片中
 		movies = append(movies, &movie)
 	}
 
-	// When the rows.Next() loop has finished, call rows.Err() to retrieve any error
-	// that was encountered during the iteration.
+	// 检查rows.Err()
 	if err = rows.Err(); err != nil {
 		return nil, Metadata{}, err
 	}
 
-	// Generate a Metadata struct, passing in the total record count and pagination parameters
-	// from the client.
+	// 计算分页信息
 	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
 
-	// If everything went OK, then return the slice of the movies and metadata.
 	return movies, metadata, nil
 }
