@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"log"
 	"net/http"
 	"os"
 	"sync"
@@ -114,6 +115,7 @@ func main() {
 		IdleTimeout:  time.Minute,      // 空闲超时
 		ReadTimeout:  10 * time.Second, // 读取超时
 		WriteTimeout: 30 * time.Second, // 写入超时
+		ErrorLog:     log.New(logger, "", 0),
 	}
 
 	// 启动 HTTP 服务器。

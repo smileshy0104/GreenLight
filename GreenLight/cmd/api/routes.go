@@ -6,7 +6,7 @@ import (
 )
 
 // 路由配置文件（将所有的路由相关内容写到这个文件）
-func (app *application) routes() *httprouter.Router {
+func (app *application) routes() http.Handler {
 	// 创建一个路由实例（使用httprouter中的对应函数）
 	router := httprouter.New()
 
@@ -23,6 +23,7 @@ func (app *application) routes() *httprouter.Router {
 	//router.HandlerFunc(http.MethodPut, "/v1/movies/:id", app.updateMovieHandler) // 更新电影信息的处理函数（Put全更新）。
 	router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.updateMovieHandler)  // 更新电影信息的处理函数（Patch部分更新）。
 	router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.deleteMovieHandler) // 删除电影信息的处理函数。
-	// 直接返回路由实例
-	return router
+
+	// 创建一个recoverPanic中间件，用于处理程序恐慌
+	return app.recoverPanic(router)
 }
