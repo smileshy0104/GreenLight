@@ -48,6 +48,9 @@ func (app *application) serve() error {
 			shutdownError <- err
 		}
 
+		//app.wg.Wait()
+		//shutdownError <- nil
+
 		//// 使用app.logger.PrintInfo()记录接收到的信号。
 		//app.logger.PrintInfo("caught signal", map[string]string{
 		//	"signal": s.String(),

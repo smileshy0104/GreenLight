@@ -58,6 +58,29 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// TODO 发送激活邮件相关代码
+	// ‘background’ goroutine将发送欢迎邮件，这个代码将被并发执行，我们不需在等待邮件发送！
+	//go func() {
+	//	// 添加defer语句，防止程序崩溃时忘记关闭资源
+	//	defer func() {
+	//		if err := recover(); err != nil {
+	//			app.logger.PrintError(fmt.Errorf("%s", err), nil)
+	//		}
+	//	}()
+	//	err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+	//	if err != nil {
+	//		app.logger.PrintError(err, nil)
+	//	}
+	//}()
+
+	// TODO 直接调用封装的background()函数，来捕获程序崩溃
+	app.background(func() {
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+		if err != nil {
+			app.logger.PrintError(err, nil)
+		}
+	})
+
 	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

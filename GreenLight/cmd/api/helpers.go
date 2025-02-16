@@ -195,3 +195,21 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 	}
 	return i
 }
+
+// background 函数用于在后台运行一个函数，并使用defer语句来处理任何可能的panic。
+func (app *application) background(fn func()) {
+	// 使用WaitGroup来等待后台goroutine完成
+	app.wg.Add(1)
+	go func() {
+		// defer语句会在函数返回之前执行
+		defer app.wg.Done()
+		// recover处理任何可能的panic
+		defer func() {
+			if err := recover(); err != nil {
+				app.logger.PrintError(fmt.Errorf("%s", err), nil)
+			}
+		}()
+		// 调用函数
+		fn()
+	}()
+}
