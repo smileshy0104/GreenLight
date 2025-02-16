@@ -3,6 +3,7 @@ package main
 import (
 	configFile "DesignMode/GreenLight/internal/config"
 	"DesignMode/GreenLight/internal/data"
+	"DesignMode/GreenLight/internal/jsonlog"
 	"context" // New import
 	"database/sql"
 	"embed"
@@ -10,7 +11,6 @@ import (
 	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"log"
 	"net/http"
 	"os"
 	"sync"
@@ -39,11 +39,11 @@ type config struct {
 
 // application 结构体包含配置和日志记录器。
 type application struct {
-	config config      // 相关配置结构体
-	logger *log.Logger // 日志记录器
-	//logger *jsonlog.Logger  // json日志记录器
-	models data.Models    // 数据库模型
-	wg     sync.WaitGroup // 等待组
+	config config // 相关配置结构体
+	//logger *log.Logger // 日志记录器
+	logger *jsonlog.Logger // json日志记录器（自定义）
+	models data.Models     // 数据库模型
+	wg     sync.WaitGroup  // 等待组
 }
 
 //go:embed config/*
@@ -77,18 +77,21 @@ func main() {
 	flag.Parse()
 
 	// 初始化日志记录器。
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
-	//logger := jsonlog.NewLogger(os.Stdout, jsonlog.LevelInfo)
+	//logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger := jsonlog.NewLogger(os.Stdout, jsonlog.LevelInfo)
 
 	// 尝试打开数据库连接池。
 	db, err := openDB(cfg)
 	if err != nil {
-		logger.Fatal(err)
+		//logger.Fatal(err)
+		logger.PrintFatal(err, nil)
 	}
+
 	defer db.Close()
 
 	// 创建一个日志记录器，并记录一条消息，表示数据库连接池已建立。
-	logger.Printf("database connection pool established")
+	//logger.Printf("database connection pool established")
+	logger.PrintInfo("database connection pool established", nil)
 
 	// 创建应用程序结构体，并初始化相关配置和日志记录器。
 	app := &application{
@@ -114,10 +117,15 @@ func main() {
 	}
 
 	// 启动 HTTP 服务器。
-	logger.Printf("正在启动 %s 环境下的服务器，监听地址为 %s", cfg.env, srv.Addr)
+	//logger.Printf("正在启动 %s 环境下的服务器，监听地址为 %s", cfg.env, srv.Addr)
+	logger.PrintInfo("starting server", map[string]string{
+		"addr": srv.Addr,
+		"env":  cfg.env,
+	})
 	// 使用srv.ListenAndServe()方法启动服务器，并记录任何错误。
 	err = srv.ListenAndServe()
-	logger.Fatal(err)
+	//logger.Fatal(err)
+	logger.PrintFatal(err, nil)
 }
 
 // openDB()函数用于创建并返回一个数据库连接池。

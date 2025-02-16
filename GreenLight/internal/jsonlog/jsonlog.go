@@ -9,11 +9,10 @@ import (
 	"time"
 )
 
-// Level represents the severity level of a log entry.
+// 定义levels
 type Level int8
 
-// Initialize constants which represent a specific severity level using the "iota" keyword
-// as a shortcut to assign successive integer values to the constants.
+// 定义各种 severity levels
 const (
 	LevelInfo  Level = iota // Has the value of 0.
 	LevelError              // Has the value of 1.
@@ -21,7 +20,7 @@ const (
 	LevelOff                // Has the value of 3.
 )
 
-// String returns a human-friendly string for the severity level.
+// 每种 level 有对应的字符串
 func (l Level) String() string {
 	switch l {
 	case LevelInfo:
@@ -35,17 +34,14 @@ func (l Level) String() string {
 	}
 }
 
-// Logger is the custom logger. It holds the output destination that the log entries will be
-// written to, the minimum severity level that log entries will be written for, and a mutex
-// for coordination the writes.
+// Logger 日志实例结构体
 type Logger struct {
 	out      io.Writer
 	minLevel Level
 	mu       sync.Mutex
 }
 
-// NewLogger returns a new Logger instance which writes log entries at or above a minimum severity
-// level to a specific output destination.
+// 创建 一个 Logger 实例
 func NewLogger(out io.Writer, minLevel Level) *Logger {
 	return &Logger{
 		out:      out,
@@ -53,31 +49,31 @@ func NewLogger(out io.Writer, minLevel Level) *Logger {
 	}
 }
 
-// PrintInfo is a helper that writes Info level log entries.
+// PrintInfo 是一个 helper 方法，它写一个 Info 级别的日志条目
 func (l *Logger) PrintInfo(message string, properties map[string]string) {
 	l.print(LevelInfo, message, properties)
 }
 
-// PrintError is a helper that writes Info level log entries.
+// PrintInfo 是一个 helper 方法，它写一个 Error 级别的日志条目
 func (l *Logger) PrintError(err error, properties map[string]string) {
 	l.print(LevelError, err.Error(), properties)
 }
 
-// PrintFatal is a helper that writes Info level log entries. It also terminates the application.
+// PrintFatal 是一个 helper 方法，它写一个 Fatal 级别的日志条目
 func (l *Logger) PrintFatal(err error, properties map[string]string) {
 	l.print(LevelFatal, err.Error(), properties)
+	// 直接 退出程序
 	os.Exit(1)
 }
 
-// print is an internal method for writing a log entry.
+// print 方法 打印各种错误等级的日志
 func (l *Logger) print(level Level, message string, properties map[string]string) (int, error) {
-	// If the severity level of the log entry is below the minimum severity for the logger
-	// then return with no further action
+	// 如果日志等级小于最小等级，则直接返回
 	if level < l.minLevel {
 		return 0, nil
 	}
 
-	// Declare an anonymous struct holding the data for the log entry.
+	// 声明 一个匿名结构体存放日志信息
 	aux := struct {
 		Level      string            `json:"level"`
 		Time       string            `json:"time"`
@@ -91,34 +87,30 @@ func (l *Logger) print(level Level, message string, properties map[string]string
 		Properties: properties,
 	}
 
-	// Include a stack trace for entries at the ERROR and FATAL levels.
+	// 包含 错误等级的堆栈跟踪
 	if level >= LevelError {
 		aux.Trace = string(debug.Stack())
 	}
 
-	// Declare a line variable for holding the actual log entry text.
+	// 声明一个变量，用于存储日志的 JSON 格式
 	var line []byte
 
-	// Marshal the anonymous struct to JSON and store it in the line variable. If there was a
-	// problem creating the JSON then set the contents of the log entry to be that
-	// plan-text error message instead.
+	// 将日志信息转换为 JSON 格式
 	line, err := json.Marshal(aux)
 	if err != nil {
 		line = []byte(LevelError.String() + ": unable to marshal log message:" + err.Error())
 	}
 
-	// Lock the mutex so that no two writes to the output destination cannot happen concurrently.
-	// If we don't do this, it's possible that the text for two or more log entries will
-	// be intermingled in the output
+	// 获取锁，并使用 defer 语句确保锁在函数返回时自动释放
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	// Write the log entry followed by a newline.
+	// 将日志信息写入到 io.Writer 中，并返回写入的字节数和错误信息
 	return l.out.Write(append(line, '\n'))
 }
 
-// Write satisfies the io.Writer interface. It writes a log entry at the ERROR level with
-// no additional properties
+// Write 方法 实现了 io.Writer 接口
 func (l *Logger) Write(message []byte) (n int, err error) {
+	// 调用 print 方法，将日志信息写入到 io.Writer 中
 	return l.print(LevelError, string(message), nil)
 }

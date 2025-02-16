@@ -9,11 +9,11 @@ import (
 // logError 方法是用于在应用程序中记录错误信息的通用帮助函数，同时
 // 记录请求的方法和请求的URL。
 func (app *application) logError(r *http.Request, err error) {
-	//app.logger.PrintError(err, map[string]string{
-	//	"request_method": r.Method,
-	//	"request_url":    r.URL.String(),
-	//})
-	app.logger.Println(err)
+	app.logger.PrintError(err, map[string]string{
+		"request_method": r.Method,
+		"request_url":    r.URL.String(),
+	})
+	//app.logger.Println(err)
 }
 
 // errorResponse 方法是用于向客户端发送JSON格式错误消息的通用帮助函数。

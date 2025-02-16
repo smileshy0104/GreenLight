@@ -41,7 +41,7 @@ func (app *application) healthcheckHandlerOld2(w http.ResponseWriter, r *http.Re
 	// a generic error message.
 	js, err := json.Marshal(data)
 	if err != nil {
-		app.logger.Println(err) // log日志包
+		app.logger.PrintError(err, nil) // log日志包
 		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
 		return
 	}
@@ -62,7 +62,7 @@ func (app *application) healthcheckHandlerOld3(w http.ResponseWriter, r *http.Re
 	}
 	err := app.writeJSONOld(w, http.StatusOK, data, nil) // 调用封装的writeJSON()函数
 	if err != nil {
-		app.logger.Println(err)
+		app.logger.PrintError(err, nil)
 		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
 	}
 }

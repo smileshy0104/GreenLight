@@ -214,7 +214,7 @@ func (app *application) showMovieHandlerOld2(w http.ResponseWriter, r *http.Requ
 	}
 	err = app.writeJSONOld(w, http.StatusOK, movie, nil)
 	if err != nil {
-		app.logger.Println(err)
+		app.logger.PrintError(err, nil)
 		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
 	}
 }
