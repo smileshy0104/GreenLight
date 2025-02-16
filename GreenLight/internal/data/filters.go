@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Filters 用于封装分页信息
 type Filters struct {
 	Page         int
 	PageSize     int
@@ -13,7 +14,7 @@ type Filters struct {
 	SortSafeList []string
 }
 
-// Metadata holds pagination metadata.
+// Metadata 包含分页信息的结构体
 type Metadata struct {
 	CurrentPage  int `json:"current_page,omitempty"`
 	PageSize     int `json:"page_size,omitempty"`
@@ -22,10 +23,7 @@ type Metadata struct {
 	TotalRecords int `json:"total_records,omitempty"`
 }
 
-// calculateMetadata calculates the appropriate pagination metadata values given the total number
-// of records, current page, and page size values. Note, the last page value is calculated using the
-// math.Ceil() function, which rounds up a float to the nearest integer. So, for example, if there
-// were 13 records in total and a page size of 5, the last page value would be math.Ceil(13/5) = 3.
+// calculateMetadata 函数用于计算分页信息
 func calculateMetadata(totalRecords, page, pageSize int) Metadata {
 	if totalRecords == 0 {
 		return Metadata{} // return an empty Metadata struct if there are no records
@@ -40,36 +38,31 @@ func calculateMetadata(totalRecords, page, pageSize int) Metadata {
 	}
 }
 
-// ValidateFilters runs validation checks on the Filters type.
+// ValidateFilters 校验过滤器
 func ValidateFilters(v *validator.Validator, f Filters) {
-	// Check that page and page_size parameters contain sensible values.
+	// 检查page和page_size参数
 	v.Check(f.Page > 0, "page", "must be greater than 0")
 	v.Check(f.Page <= 10_000_0000, "", "must be a maximum of 10 million")
 	v.Check(f.PageSize > 0, "page_size", "must be greater than 0")
 	v.Check(f.PageSize <= 100, "page_size", "must be a maximum of 100")
-
-	// Check that the sort parameter matches a value in the safelist.
+	// 检查sort参数
 	v.Check(validator.In(f.Sort, f.SortSafeList...), "sort", "invalid sort value")
 }
 
-// sortColumn checks that the client-provided Sort field matches one of the entries in our
-// SortSafeList and if it does, it extracts the column name from the Sort field by stripping the
-// leading hyphen character (if one exists).
+// sortColumn 排序字段
 func (f Filters) sortColumn() string {
+	// 遍历排序字段，如果存在则返回排序字段，否则抛出panic
 	for _, safeValue := range f.SortSafeList {
 		if f.Sort == safeValue {
 			return strings.TrimPrefix(f.Sort, "-")
 		}
 	}
 
-	// The panic below should technically not happen because the Sort value should have already
-	// been checked when calling the ValidateFilters helper function. However, this is a sensible
-	// failsafe to help stop a SQL injection attach from occurring.
+	// 如果排序字段不存在，抛出panic
 	panic("unsafe sort parameter:" + f.Sort)
 }
 
-// sortDirection returns the sort direction ("ASC" or "DESC") depending on the prefix character
-// of the Sort field.
+// sortDirection 排序方向
 func (f Filters) sortDirection() string {
 	if strings.HasPrefix(f.Sort, "-") {
 		return "DESC"
@@ -77,10 +70,12 @@ func (f Filters) sortDirection() string {
 	return "ASC"
 }
 
+// limit 分页条数
 func (f Filters) limit() int {
 	return f.PageSize
 }
 
+// offset 分页偏移量
 func (f Filters) offset() int {
 	return (f.Page - 1) * f.PageSize
 }

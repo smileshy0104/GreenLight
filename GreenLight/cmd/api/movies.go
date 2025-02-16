@@ -181,7 +181,6 @@ func (app *application) showMovieHandlerOld(w http.ResponseWriter, r *http.Reque
 		http.NotFound(w, r)
 		return
 	}
-	// Otherwise, interpolate the movie ID in a placeholder response.
 	fmt.Fprintf(w, "show the details of movie %d\n", id)
 }
 
@@ -193,7 +192,6 @@ func (app *application) showMovieHandlerOld1(w http.ResponseWriter, r *http.Requ
 		http.NotFound(w, r)
 		return
 	}
-	// Otherwise, interpolate the movie ID in a placeholder response.
 	fmt.Fprintf(w, "show the details of movie %d\n", id)
 }
 
@@ -214,7 +212,6 @@ func (app *application) showMovieHandlerOld2(w http.ResponseWriter, r *http.Requ
 		Genres:    strings.Join([]string{"drama", "romance", "war"}, ","),
 		Version:   1,
 	}
-	// Encode the struct to JSON and send it as the HTTP response.
 	err = app.writeJSONOld(w, http.StatusOK, movie, nil)
 	if err != nil {
 		app.logger.Println(err)
@@ -228,7 +225,6 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		// 使用未封装的http.NotFound()函数
 		//http.NotFound(w, r)
-		// Use the new notFoundResponse() helper.
 		app.notFoundResponse(w, r)
 		return
 	}
@@ -242,8 +238,6 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 		}
 		return
 	}
-	// Create an envelope{"movie": movie} instance and pass it to writeJSON(), instead
-	// of passing the plain movie struct.
 	err = app.writeJSON(w, http.StatusOK, envelope{"movie": movie}, nil)
 	if err != nil {
 		// 使用未封装的logger和http.Error()函数
@@ -346,14 +340,12 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 
 // deleteMovieHandler 删除Movie
 func (app *application) deleteMovieHandler(w http.ResponseWriter, r *http.Request) {
-	// Extract the movie ID from the URL.
+	// 获取路由参数
 	id, err := app.readIDParam(r)
 	if err != nil {
 		app.notFoundResponse(w, r)
 		return
 	}
-	// Delete the movie from the database, sending a 404 Not Found response to the
-	// client if there isn't a matching record.
 	err = app.models.Movies.Delete(id)
 	if err != nil {
 		switch {
@@ -364,7 +356,7 @@ func (app *application) deleteMovieHandler(w http.ResponseWriter, r *http.Reques
 		}
 		return
 	}
-	// Return a 200 OK status code along with a success message.
+	// 使用writeJSON()函数
 	err = app.writeJSON(w, http.StatusOK, envelope{"message": "movie successfully deleted"}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

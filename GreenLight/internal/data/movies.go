@@ -142,40 +142,31 @@ func (m MovieModel) Update(movie *Movie) error {
 	return nil
 }
 
-// Delete deletes a specific record from the movies table.
+// 删除一个movie
 func (m MovieModel) Delete(id int64) error {
-	// Return an ErrRecordNotFound error if the movie ID is less than 1
+	// 检查id是否小于1
 	if id < 1 {
 		return ErrRecordNotFound
 	}
 
 	query := `
 		DELETE FROM movies
-		WHERE id = $1
+		WHERE id = ?
 		`
 
-	// Create a context with a 3-second timeout.
+	// 使用context上下文的延时函数，超时则自动cancel
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	// Execute the SQL query using the Exec() method,
-	// passing in the id variable as the value for the placeholder parameter. The Exec(
-	// ) method returns a sql.Result object.
 	result, err := m.DB.ExecContext(ctx, query, id)
 	if err != nil {
 		return err
 	}
-
-	// Call the RowsAffected() method on the sql.Result
-	// object to get the number of rows affected by the query.
+	// 判断删除的行数是否为0
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
-
-	// If no rows were affected,
-	// we know that the movies table didn't contain a record with the provided ID at the moment
-	// we tried to delete it. In that case we return an ErrRecordNotFound error.
 	if rowsAffected == 0 {
 		return ErrRecordNotFound
 	}
@@ -183,14 +174,8 @@ func (m MovieModel) Delete(id int64) error {
 	return nil
 }
 
-// GetAll returns a list of movies in the form of a string of Movie type based on a set of
-// provided filters.
+// 获取所有movie
 func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error) {
-	// Add an ORDER BY clause and interpolate the sort column and direction using fmt.Sprintf.
-	// Importantly, notice that we also include a secondary sort on the movie ID to ensure
-	// a consistent ordering. Furthermore, we include LIMIT and OFFSET clauses with placeholder
-	// parameter values for pagination implementation. The window function is used to calculate
-	// the total filtered rows which will be used in our pagination metadata.
 	query := fmt.Sprintf(`
 		SELECT count(*) OVER(), id, created_at, title, year, runtime, genres, version
 		FROM movies
