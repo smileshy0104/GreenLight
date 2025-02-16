@@ -25,5 +25,6 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.deleteMovieHandler) // 删除电影信息的处理函数。
 
 	// 创建一个recoverPanic中间件，用于处理程序恐慌
-	return app.recoverPanic(router)
+	// 创建一个rateLimit中间件，用于限制请求速率
+	return app.recoverPanic(app.rateLimit(router))
 }

@@ -36,6 +36,12 @@ type config struct {
 		maxIdleConns int
 		maxIdleTime  string
 	}
+	// 限流相关配置
+	limiter struct {
+		rps     float64
+		burst   int
+		enabled bool
+	}
 }
 
 // application 结构体包含配置和日志记录器。
