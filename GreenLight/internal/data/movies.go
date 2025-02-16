@@ -175,6 +175,16 @@ func (m MovieModel) Delete(id int64) error {
 
 // 获取所有movie
 func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error) {
+	// 初始化一个totalRecords变量，用于存储查询结果中的总记录数
+	totalRecords := 0
+
+	query0 := fmt.Sprintf(`
+		SELECT count(*)
+		FROM movies
+		`)
+
+	m.DB.QueryRow(query0).Scan(&totalRecords)
+
 	query := fmt.Sprintf(`
 		SELECT id, created_at, title, year, runtime, genres, version
 		FROM movies
@@ -217,9 +227,6 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 			m.ErrorLog.Println(err)
 		}
 	}()
-
-	// 初始化一个totalRecords变量，用于存储查询结果中的总记录数
-	totalRecords := 0
 
 	// 初始化一个movies变量，用于存储查询结果
 	movies := []*Movie{}
