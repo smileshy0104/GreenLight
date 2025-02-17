@@ -5,6 +5,7 @@ import (
 	"DesignMode/GreenLight/internal/validator"
 	"errors"
 	"net/http"
+	"time"
 )
 
 // 注册用户 registerUserHandler
@@ -58,6 +59,13 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// 生成令牌，并设置其过期时间为3天，并使用 ScopeActivation 作为作用域
+	token, err := app.models.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
 	// TODO 发送激活邮件相关代码
 	// ‘background’ goroutine将发送欢迎邮件，这个代码将被并发执行，我们不需在等待邮件发送！
 	//go func() {
@@ -75,7 +83,11 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 
 	// TODO 直接调用封装的background()函数，来捕获程序崩溃
 	app.background(func() {
-		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+		data := map[string]interface{}{
+			"activationToken": token.Plaintext,
+			"userID":          user.ID,
+		}
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl", data)
 		if err != nil {
 			app.logger.PrintError(err, nil)
 		}
