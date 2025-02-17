@@ -24,7 +24,8 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.updateMovieHandler)  // 更新电影信息的处理函数（Patch部分更新）。
 	router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.deleteMovieHandler) // 删除电影信息的处理函数。
 
-	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler) // 注册用户的处理函数。
+	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)          // 注册用户的处理函数。
+	router.HandlerFunc(http.MethodPut, "/v1/users/activated", app.activateUserHandler) // 激活用户的处理函数。
 
 	// 创建一个recoverPanic中间件，用于处理程序恐慌
 	// 创建一个rateLimit中间件，用于限制请求速率

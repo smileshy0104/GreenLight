@@ -99,31 +99,30 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-// activateUserHandler activates a user by setting 'activation = true' using the provided
-// activation token in the request body.
+// 激活用户 activateUserHandler
 func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
-	// Parse the plaintext activation token from the request body
+	// 创建一个结构体，用于存储从 HTTP 请求体中预期获取的信息。
 	var input struct {
 		TokenPlaintext string `json:"token"`
 	}
 
+	// 读取JSON请求体数据到input结构体中
 	err := app.readJSON(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
 
-	// Validate the plaintext token provided by the client.
+	// 创建校验器实例
 	v := validator.New()
 
-	//if data.ValidateTokenPlaintext(v, input.TokenPlaintext); !v.Valid() {
-	//	app.failedValidationResponse(w, r, v.Errors)
-	//	return
-	//}
+	// 使用 ValidateTokenPlaintext() 方法对输入进行验证
+	if data.ValidateTokenPlaintext(v, input.TokenPlaintext); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
 
-	// Retrieve the details of the user associated with the token using the GetForToken() method.
-	// If no matching record is found, then we let the client know that the token they provided
-	// is not valid.
+	// 获取包含用户记录的 Token 记录
 	user, err := app.models.Users.GetForToken(data.ScopeActivation, input.TokenPlaintext)
 	if err != nil {
 		switch {
@@ -136,11 +135,10 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Update the user's activation status.
+	// 将用户记录的 Activated 字段设置为 true
 	user.Activated = true
 
-	// Save the updated user record in our database, checking for any edit conflicts in the same
-	// way that we did for our move records.
+	// 更新用户记录
 	err = app.models.Users.Update(user)
 	if err != nil {
 		switch {
@@ -152,7 +150,7 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// If everything went successfully above, then delete all activation tokens for the user.
+	// 删除所有与用户关联的令牌记录
 	err = app.models.Tokens.DeleteAllForUser(data.ScopeActivation, user.ID)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

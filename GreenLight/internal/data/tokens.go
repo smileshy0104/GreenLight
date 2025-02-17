@@ -1,6 +1,7 @@
 package data
 
 import (
+	"DesignMode/GreenLight/internal/validator"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -15,6 +16,12 @@ const (
 	ScopeActivation     = "activation"
 	ScopeAuthentication = "authentication"
 )
+
+// ValidateTokenPlaintext 校验器
+func ValidateTokenPlaintext(v *validator.Validator, tokenPlaintext string) {
+	v.Check(tokenPlaintext != "", "token", "must be provided")
+	v.Check(len(tokenPlaintext) == 26, "token", "must be 26 bytes long")
+}
 
 type (
 	// 创建一个Token结构体，其中包含了令牌的明文、哈希值、用户ID、过期时间和作用域信息。
